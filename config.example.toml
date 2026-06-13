@@ -1,0 +1,32 @@
+# Herald-MCClientMCP 配置示例。
+# 复制为 ./config.toml 后按需修改。
+
+[server]
+# HTTP 监听地址（Web 面板 + MCP 端点）。
+listen = "127.0.0.1:8686"
+
+[mc]
+# 游戏目录。空字符串则自动使用平台默认。
+game_dir = ""
+# 默认 MC 版本。
+default_version = "1.20.1"
+# 默认 Mod Loader。
+default_loader = "fabric"       # fabric / forge / neoforge
+# JVM 堆内存。
+heap_mb = 4096
+# 离线模式用户名。
+offline_username = "HeraldDev"
+
+[runtime]
+# 检测不到 Java 时是否自动下载 Adoptium Temurin。
+auto_install_java = true
+# 自动下载 MC 客户端文件。
+auto_install_mc = true
+# 镜像源：default（官方）/ bmclapi（国内）
+mirror = "bmclapi"
+
+[mod]
+# 启动 MC 时自动将 Herald Client MOD 注入 mods 目录。
+auto_inject = true
+# MOD HTTP 端口扫描范围。
+mod_port_range = "8888-8898"

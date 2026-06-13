@@ -1,0 +1,18 @@
+[package]
+name = "herald-mcclient-launcher"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+herald-mcclient-core = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+which = { workspace = true }
+reqwest = { workspace = true }

@@ -1,0 +1,30 @@
+# Rust
+/target/
+Cargo.lock
+
+# Web
+apps/web/node_modules/
+apps/web/dist/
+
+# Java / Gradle
+client-mod/**/.gradle/
+client-mod/**/build/
+client-mod/**/.idea/
+client-mod/**/run/
+
+# Config (user-specific)
+config.toml
+
+# Data
+/data/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# IDE
+.idea/
+.vscode/
+*.iml
