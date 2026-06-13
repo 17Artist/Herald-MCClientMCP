@@ -16,13 +16,13 @@ Herald automation HTTP bridge (client-side, single-end).
 [[dependencies.${mod_id}]]
     modId="neoforge"
     type="required"
-    versionRange="[21.1,)"
+    versionRange="[21.4,)"
     ordering="NONE"
     side="CLIENT"
 
 [[dependencies.${mod_id}]]
     modId="minecraft"
     type="required"
-    versionRange="[${minecraft_version},1.21.2)"
+    versionRange="[1.21.4,1.22)"
     ordering="NONE"
     side="CLIENT"

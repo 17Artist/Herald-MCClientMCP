@@ -67,10 +67,11 @@ impl LoaderInstaller {
                 false
             }
             LoaderType::NeoForge => {
+                let prefix = neoforge_dir_prefix(mc_version);
                 if let Ok(entries) = std::fs::read_dir(&versions_dir) {
                     for entry in entries.flatten() {
                         let name = entry.file_name().to_string_lossy().to_string();
-                        if name.contains("neoforge") {
+                        if name.starts_with(&prefix) {
                             return true;
                         }
                     }
@@ -220,7 +221,8 @@ impl LoaderInstaller {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            anyhow::bail!("NeoForge installation failed: {}", stderr);
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            anyhow::bail!("NeoForge installation failed:\n{}\n{}", stdout, stderr);
         }
 
         info!("NeoForge installed successfully");
@@ -237,15 +239,39 @@ impl LoaderInstaller {
     }
 
     /// 获取 MC 版本对应的最新 NeoForge 版本号。
-    async fn get_neoforge_version(&self, mc_version: &str) -> anyhow::Result<String> {
+    pub async fn get_neoforge_version(&self, mc_version: &str) -> anyhow::Result<String> {
         match mc_version {
             "1.20.1" => Ok("47.1.106".to_string()),
             "1.21.1" => Ok("21.1.172".to_string()),
-            "1.21.4" => Ok("21.4.186".to_string()),
-            "1.21.8" => Ok("21.8.52".to_string()),
-            "26.1" => Ok("26.1.0.19-beta".to_string()),
-            "26.1.2" => Ok("26.1.2.76".to_string()),
+            "1.21.4" => Ok("21.4.157".to_string()),
+            "1.21.8" => Ok("21.8.53".to_string()),
+            "26.1" => Ok("26.1.0.8-beta".to_string()),
+            "26.1.2" => Ok("26.1.2.75".to_string()),
             _ => anyhow::bail!("Unsupported NeoForge MC version: {}", mc_version),
+        }
+    }
+}
+
+/// 根据 MC 版本生成 NeoForge 目录名前缀（用于 is_installed 和 resolve_version_id）。
+/// MC 1.21.1 → "neoforge-21.1."
+/// MC 1.21.4 → "neoforge-21.4."
+/// MC 26.1   → "neoforge-26.1.0"
+/// MC 26.1.2 → "neoforge-26.1.2."
+pub fn neoforge_dir_prefix(mc_version: &str) -> String {
+    if mc_version.starts_with("1.") {
+        // 1.21.1 → 21.1, 1.21.4 → 21.4
+        let stripped = &mc_version[2..]; // "21.1" or "21.4"
+        format!("neoforge-{}.", stripped)
+    } else {
+        // 26.1 → "neoforge-26.1.0" (NeoForge uses 26.1.0.x for MC 26.1)
+        // 26.1.2 → "neoforge-26.1.2."
+        let parts: Vec<&str> = mc_version.split('.').collect();
+        if parts.len() == 2 {
+            // MC 26.1 → NeoForge 26.1.0.x
+            format!("neoforge-{}.0", mc_version)
+        } else {
+            // MC 26.1.2 → NeoForge 26.1.2.x
+            format!("neoforge-{}.", mc_version)
         }
     }
 }

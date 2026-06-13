@@ -145,8 +145,16 @@ async fn env_install_loader(state: &AppState, args: &Value) -> Result<Value, (i3
     let loader_type = herald_mcclient_env::loader::LoaderType::from_str(loader_str)
         .ok_or((-32602, format!("Invalid loader: {}", loader_str)))?;
 
-    let java = state.java_manager.find_best_java(17)
-        .ok_or((-32000, "No Java 17+ found".to_string()))?;
+    // Choose Java version based on MC version (installer needs same Java as the game)
+    let min_java = if mc_version.starts_with("26.") {
+        25
+    } else if mc_version.starts_with("1.21") {
+        21
+    } else {
+        17
+    };
+    let java = state.java_manager.find_best_java(min_java)
+        .ok_or((-32000, format!("No Java {}+ found. Use mc_env_install_java first.", min_java)))?;
 
     let game_dir = state.config.game_dir();
     let installer = herald_mcclient_env::LoaderInstaller::new(

@@ -56,24 +56,62 @@ impl LaunchArgs {
 
         let mut args = Vec::new();
 
-        // JVM args from version JSON (Forge needs -p, --add-modules, --add-opens etc.)
+        // JVM args from version JSON (Forge/NeoForge needs -p, --add-modules, --add-opens etc.)
         let sep = if cfg!(windows) { ";" } else { ":" };
+        let mut module_path_artifacts: Vec<String> = Vec::new(); // track artifacts on module-path
         if let Some(jvm_args) = info.pointer("/arguments/jvm").and_then(|v| v.as_array()) {
+            let mut is_module_path_next = false;
             for arg in jvm_args {
                 if let Some(s) = arg.as_str() {
                     let mut resolved = s
                         .replace("${library_directory}", &libraries_dir.display().to_string())
                         .replace("${classpath_separator}", sep)
                         .replace("${version_name}", &version_id);
-                    // Append herald-client to ignoreList so Forge doesn't load it as a module
+                    // Append herald-client to ignoreList so Forge/NeoForge doesn't load it as a module
                     if resolved.starts_with("-DignoreList=") {
                         resolved.push_str(",herald-client");
+                    }
+                    // Track module path entries to filter from classpath
+                    if is_module_path_next {
+                        // Extract artifact names from module path (e.g. "asm-9.7.jar" → "asm")
+                        for path_entry in resolved.split(sep) {
+                            if let Some(fname) = Path::new(path_entry).file_name() {
+                                let fname_str = fname.to_string_lossy();
+                                // Extract artifact base name (strip version): "asm-9.7.jar" → "asm"
+                                if let Some(artifact) = extract_artifact_name(&fname_str) {
+                                    module_path_artifacts.push(artifact);
+                                }
+                            }
+                        }
+                        is_module_path_next = false;
+                    }
+                    if resolved == "-p" || resolved == "--module-path" {
+                        is_module_path_next = true;
                     }
                     args.push(resolved);
                 }
                 // Skip conditional/object args
             }
         }
+
+        // Filter classpath: remove entries whose artifact is already on module-path (different version)
+        let filtered_cp = if !module_path_artifacts.is_empty() {
+            classpath.split(sep)
+                .filter(|entry| {
+                    if let Some(fname) = Path::new(entry).file_name() {
+                        let fname_str = fname.to_string_lossy();
+                        if let Some(artifact) = extract_artifact_name(&fname_str) {
+                            // If this artifact is on module path, skip it from classpath
+                            return !module_path_artifacts.contains(&artifact);
+                        }
+                    }
+                    true
+                })
+                .collect::<Vec<_>>()
+                .join(sep)
+        } else {
+            classpath
+        };
 
         // Our JVM args (after version JSON args so they take precedence)
         args.push(format!("-Xmx{}m", self.heap_mb));
@@ -85,7 +123,7 @@ impl LaunchArgs {
             args.push("-Dherald.headless=true".to_string());
         }
         args.push("-cp".to_string());
-        args.push(classpath);
+        args.push(filtered_cp);
 
         // Main class
         args.push(main_class);
@@ -134,7 +172,10 @@ impl LaunchArgs {
                     let matches = match loader.as_str() {
                         "fabric" => name.starts_with("fabric-loader-") && name.ends_with(&self.version),
                         "forge" => name.contains(&self.version) && name.contains("forge"),
-                        "neoforge" => name.contains("neoforge"),
+                        "neoforge" => {
+                            let prefix = herald_mcclient_env::loader::neoforge_dir_prefix(&self.version);
+                            name.starts_with(&prefix)
+                        }
                         _ => false,
                     };
                     if matches {
@@ -165,9 +206,9 @@ impl LaunchArgs {
             self.add_libs_to_classpath(vanilla, lib_dir, &mut paths);
         }
 
-        // Client jar (not for Forge - Forge loads it through its own mechanism)
-        let is_forge = self.loader.as_deref() == Some("forge");
-        if !is_forge {
+        // Client jar (not for Forge/NeoForge - they use BootstrapLauncher to load it)
+        let is_forge_like = matches!(self.loader.as_deref(), Some("forge") | Some("neoforge"));
+        if !is_forge_like {
             let client_jar = versions_dir.join(&self.version).join(format!("{}.jar", self.version));
             if client_jar.exists() {
                 let p = client_jar.display().to_string();
@@ -214,4 +255,21 @@ fn maven_name_to_path(name: &str) -> String {
         Some(c) => format!("{}/{}/{}/{}-{}-{}.jar", group, artifact, version, artifact, version, c),
         None => format!("{}/{}/{}/{}-{}.jar", group, artifact, version, artifact, version),
     }
+}
+
+/// Extract artifact base name from a jar filename.
+/// "asm-9.7.jar" → "asm"
+/// "bootstraplauncher-2.0.2.jar" → "bootstraplauncher"
+/// "securejarhandler-3.0.8.jar" → "securejarhandler"
+fn extract_artifact_name(filename: &str) -> Option<String> {
+    let name = filename.strip_suffix(".jar")?;
+    // Find the last '-' followed by a digit (version separator)
+    let bytes = name.as_bytes();
+    for i in (0..bytes.len()).rev() {
+        if bytes[i] == b'-' && i + 1 < bytes.len() && bytes[i + 1].is_ascii_digit() {
+            return Some(name[..i].to_string());
+        }
+    }
+    // No version found, use whole name
+    Some(name.to_string())
 }
