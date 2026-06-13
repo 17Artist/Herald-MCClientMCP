@@ -187,7 +187,7 @@ async fn start_client(
         loader,
         heap_mb,
         username,
-        headless: req.headless.unwrap_or(false),
+        headless: req.headless.unwrap_or(true),
     };
 
     match state.client_process.start(launch_args).await {

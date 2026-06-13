@@ -217,7 +217,7 @@ async fn client_start(state: &AppState, args: &Value) -> Result<Value, (i32, Str
         loader,
         heap_mb,
         username,
-        headless: args["headless"].as_bool().unwrap_or(false),
+        headless: args["headless"].as_bool().unwrap_or(true),
     };
 
     state.client_process.start(launch_args).await
@@ -285,35 +285,6 @@ fn inject_herald_mod(game_dir: &std::path::Path, loader: Option<&str>, version: 
     // 如果是 Fabric，确保 Fabric API 也在 mods/ 目录下
     if loader_suffix == "fabric" {
         // Fabric API 的下载已在 client_start 中以 await 方式处理
-    }
-
-    // Clean duplicate ASM jars — Fabric Loader fails if multiple ASM versions exist
-    // Only do this for Fabric; Forge/NeoForge handle ASM differently
-    if loader_suffix == "fabric" {
-        let asm_dir = game_dir.join("libraries").join("org").join("ow2").join("asm").join("asm");
-        if asm_dir.exists() {
-            if let Ok(entries) = std::fs::read_dir(&asm_dir) {
-                let versions: Vec<std::path::PathBuf> = entries
-                    .filter_map(|e| e.ok())
-                    .filter(|e| e.path().is_dir())
-                    .map(|e| e.path())
-                    .collect();
-                if versions.len() > 1 {
-                    // Find which ASM version is referenced by the current Fabric loader profile
-                    let profile_dir = game_dir.join("versions");
-                    let expected_asm = find_asm_version_for_fabric(&profile_dir, version);
-                    for path in &versions {
-                        let dir_name = path.file_name().unwrap_or_default().to_string_lossy().to_string();
-                        if let Some(ref expected) = expected_asm {
-                            if dir_name != *expected {
-                                tracing::info!("Removing conflicting ASM {}", dir_name);
-                                let _ = std::fs::remove_dir_all(path);
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 
     Ok(())
