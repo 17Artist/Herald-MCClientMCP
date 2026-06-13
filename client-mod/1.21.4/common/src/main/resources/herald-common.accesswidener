@@ -1,0 +1,10 @@
+accessWidener v1 named
+
+# Brewing stand data (brew time + fuel)
+accessible field net/minecraft/world/inventory/BrewingStandMenu brewingStandData Lnet/minecraft/world/inventory/ContainerData;
+
+# Furnace container data (litTime, litDuration, cookingProgress, cookingTotalTime)
+accessible field net/minecraft/world/inventory/AbstractFurnaceMenu data Lnet/minecraft/world/inventory/ContainerData;
+
+# Client advancement progress map
+accessible field net/minecraft/client/multiplayer/ClientAdvancements progress Ljava/util/Map;

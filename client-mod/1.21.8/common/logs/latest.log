@@ -1,0 +1,31 @@
+[02:57:46] [Test worker/INFO]: ActionRegistry frozen with 0 actions
+[02:57:46] [Test worker/INFO]: ActionRegistry frozen with 1 actions
+[02:57:46] [Test worker/INFO]: ActionRegistry frozen with 1 actions
+[02:57:46] [Test worker/INFO]: Registering 0 extra handlers
+[02:57:46] [Test worker/INFO]: Herald HTTP server listening on 127.0.0.1:40000
+[02:57:46] [Test worker/INFO]: Herald HTTP server stopped
+[02:57:46] [Test worker/INFO]: ActionRegistry frozen with 1 actions
+[02:57:46] [Test worker/INFO]: Registering 0 extra handlers
+[02:57:46] [Test worker/INFO]: Herald HTTP server listening on 127.0.0.1:40000
+[02:57:46] [Test worker/INFO]: Herald HTTP server stopped
+[02:57:46] [Test worker/INFO]: ActionRegistry frozen with 1 actions
+[02:57:46] [Test worker/INFO]: Registering 0 extra handlers
+[02:57:46] [Test worker/INFO]: Herald HTTP server listening on 127.0.0.1:40000
+[02:57:46] [Test worker/INFO]: Herald HTTP server stopped
+[02:57:46] [Test worker/INFO]: ActionRegistry frozen with 1 actions
+[02:57:46] [Test worker/INFO]: Registering 0 extra handlers
+[02:57:46] [Test worker/INFO]: Herald HTTP server listening on 127.0.0.1:40000
+[02:57:46] [Test worker/INFO]: Herald HTTP server stopped
+[02:57:46] [Test worker/INFO]: ActionRegistry frozen with 1 actions
+[02:57:46] [Test worker/INFO]: Registering 0 extra handlers
+[02:57:46] [Test worker/INFO]: Herald HTTP server listening on 127.0.0.1:40000
+[02:57:46] [Test worker/INFO]: Herald HTTP server stopped
+[02:57:46] [Test worker/INFO]: ActionRegistry frozen with 1 actions
+[02:57:46] [Test worker/INFO]: Registering 0 extra handlers
+[02:57:46] [Test worker/INFO]: Herald HTTP server listening on 127.0.0.1:40000
+[02:57:46] [Test worker/INFO]: Herald HTTP server stopped
+[02:57:46] [Test worker/INFO]: Token written to C:\Users\65280\AppData\Local\Temp\junit4310715072650765616\a\client-token
+[02:57:46] [Test worker/INFO]: Token written to C:\Users\65280\AppData\Local\Temp\junit4310715072650765616\b\client-token
+[02:57:46] [Test worker/INFO]: Token written to C:\Users\65280\AppData\Local\Temp\junit9538600681343437267\.herald\client-token
+[02:57:46] [Test worker/INFO]: Token written to C:\Users\65280\AppData\Local\Temp\junit11464731094274787233\.herald\client-token
+[02:57:46] [Test worker/INFO]: Token written to C:\Users\65280\AppData\Local\Temp\junit8628312272657360271\.herald\client-token

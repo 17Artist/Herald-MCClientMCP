@@ -180,9 +180,16 @@ async fn client_start(state: &AppState, args: &Value) -> Result<Value, (i32, Str
     let username = args["username"].as_str()
         .unwrap_or(&state.config.mc.offline_username).to_string();
 
-    // 找 Java
-    let java = state.java_manager.find_best_java(17)
-        .ok_or((-32000, "No Java 17+ found. Use mc_env_install_java first.".to_string()))?;
+    // 找 Java - 根据 MC 版本选择最低 Java 版本
+    let min_java = if version.starts_with("26.") {
+        25
+    } else if version.starts_with("1.21") {
+        21
+    } else {
+        17
+    };
+    let java = state.java_manager.find_best_java(min_java)
+        .ok_or((-32000, format!("No Java {}+ found. Use mc_env_install_java first.", min_java)))?;
 
     // 自动注入 Herald MOD jar 到 mods/
     let game_dir = state.config.game_dir();
@@ -191,7 +198,7 @@ async fn client_start(state: &AppState, args: &Value) -> Result<Value, (i32, Str
 
     // 确保 Fabric API 就位（同步等待下载完成）
     if loader.as_deref() == Some("fabric") || loader.is_none() {
-        ensure_fabric_api_blocking(&game_dir.join("mods")).await
+        ensure_fabric_api_blocking(&game_dir.join("mods"), &version).await
             .map_err(|e| (-32000, format!("Fabric API download failed: {}", e)))?;
     }
 
@@ -232,37 +239,37 @@ fn inject_herald_mod(game_dir: &std::path::Path, loader: Option<&str>, version: 
             let _ = std::fs::remove_file(&other_jar);
         }
     }
-    // Remove Fabric API when not using Fabric
-    if loader_suffix != "fabric" {
-        for entry in std::fs::read_dir(&mods_dir).into_iter().flatten() {
-            if let Ok(e) = entry {
-                let name = e.file_name().to_string_lossy().to_string();
-                if name.starts_with("fabric-api") && name.ends_with(".jar") {
+    // Remove Fabric API when not using Fabric, or remove mismatched versions
+    for entry in std::fs::read_dir(&mods_dir).into_iter().flatten() {
+        if let Ok(e) = entry {
+            let name = e.file_name().to_string_lossy().to_string();
+            if name.starts_with("fabric-api") && name.ends_with(".jar") {
+                if loader_suffix != "fabric" || !name.contains(version) {
                     let _ = std::fs::remove_file(e.path());
                 }
             }
         }
     }
 
-    // 查找 jar 文件：先在 exe 同目录下找，再在 client-mod/<version>/build/libs/ 找
+    // 查找 jar 文件：优先版本特定路径（client-mod/<version>/<loader>/build/libs/），再找 exe 同目录
     let exe_dir = std::env::current_exe()
         .ok()
         .and_then(|p| p.parent().map(|d| d.to_path_buf()))
         .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
 
     let candidates = [
+        std::env::current_dir().unwrap_or_default().join("client-mod").join(&version).join(loader_suffix).join("build").join("libs").join(&jar_name),
+        exe_dir.join("client-mod").join(&version).join(loader_suffix).join("build").join("libs").join(&jar_name),
         exe_dir.join(&jar_name),
         exe_dir.join("mods").join(&jar_name),
-        std::env::current_dir().unwrap_or_default().join("client-mod").join(&version).join(loader_suffix).join("build").join("libs").join(&jar_name),
     ];
 
     let source = candidates.iter().find(|p| p.exists());
     if let Some(src) = source {
         let dest = mods_dir.join(&jar_name);
-        if !dest.exists() || file_size(src) != file_size(&dest) {
-            std::fs::copy(src, &dest)?;
-            tracing::info!("Injected {} -> {:?}", jar_name, dest);
-        }
+        // Always overwrite to ensure correct version is injected
+        std::fs::copy(src, &dest)?;
+        tracing::info!("Injected {} -> {:?}", jar_name, dest);
     } else {
         tracing::warn!("Herald MOD jar not found ({}), skipping injection. Searched: {:?}", jar_name, candidates);
     }
@@ -272,11 +279,63 @@ fn inject_herald_mod(game_dir: &std::path::Path, loader: Option<&str>, version: 
         // Fabric API 的下载已在 client_start 中以 await 方式处理
     }
 
+    // Clean duplicate ASM jars — Fabric Loader fails if multiple ASM versions exist
+    // Only do this for Fabric; Forge/NeoForge handle ASM differently
+    if loader_suffix == "fabric" {
+        let asm_dir = game_dir.join("libraries").join("org").join("ow2").join("asm").join("asm");
+        if asm_dir.exists() {
+            if let Ok(entries) = std::fs::read_dir(&asm_dir) {
+                let versions: Vec<std::path::PathBuf> = entries
+                    .filter_map(|e| e.ok())
+                    .filter(|e| e.path().is_dir())
+                    .map(|e| e.path())
+                    .collect();
+                if versions.len() > 1 {
+                    // Find which ASM version is referenced by the current Fabric loader profile
+                    let profile_dir = game_dir.join("versions");
+                    let expected_asm = find_asm_version_for_fabric(&profile_dir, version);
+                    for path in &versions {
+                        let dir_name = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+                        if let Some(ref expected) = expected_asm {
+                            if dir_name != *expected {
+                                tracing::info!("Removing conflicting ASM {}", dir_name);
+                                let _ = std::fs::remove_dir_all(path);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     Ok(())
 }
 
+/// Find which ASM version the Fabric loader profile references for this MC version
+fn find_asm_version_for_fabric(versions_dir: &std::path::Path, mc_version: &str) -> Option<String> {
+    // Look for fabric-loader-*-<mc_version>/<name>.json
+    if let Ok(entries) = std::fs::read_dir(versions_dir) {
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.contains("fabric-loader") && name.ends_with(mc_version) {
+                let json_path = entry.path().join(format!("{}.json", name));
+                if let Ok(content) = std::fs::read_to_string(&json_path) {
+                    // Look for "org.ow2.asm:asm:X.Y.Z" in the JSON
+                    if let Some(pos) = content.find("org.ow2.asm:asm:") {
+                        let after = &content[pos + 16..];
+                        if let Some(end) = after.find('"') {
+                            return Some(after[..end].to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
 /// 确保 Fabric API 在 mods/ 中（已存在则跳过，不存在则下载并等待完成）。
-async fn ensure_fabric_api_blocking(mods_dir: &std::path::Path) -> anyhow::Result<()> {
+async fn ensure_fabric_api_blocking(mods_dir: &std::path::Path, mc_version: &str) -> anyhow::Result<()> {
     // 检查是否已有任何 fabric-api jar
     if let Ok(entries) = std::fs::read_dir(mods_dir) {
         for entry in entries.flatten() {
@@ -292,11 +351,26 @@ async fn ensure_fabric_api_blocking(mods_dir: &std::path::Path) -> anyhow::Resul
         }
     }
 
-    // 下载 Fabric API
-    let dest = mods_dir.join("fabric-api-0.92.5+1.20.1.jar");
-    let url = "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/0.92.5%2B1.20.1/fabric-api-0.92.5%2B1.20.1.jar";
-    tracing::info!("Downloading Fabric API (required dependency)...");
-    herald_mcclient_env::download::download_file(url, &dest, None).await?;
+    // 根据 MC 版本选择 Fabric API 版本
+    let (api_version, api_mc_ver) = match mc_version {
+        "1.20.1" => ("0.92.5+1.20.1", "1.20.1"),
+        "1.20.4" => ("0.97.3+1.20.4", "1.20.4"),
+        "1.21.1" => ("0.104.0+1.21.1", "1.21.1"),
+        "1.21.4" => ("0.112.2+1.21.4", "1.21.4"),
+        "1.21.8" => ("0.129.0+1.21.8", "1.21.8"),
+        "26.1" => ("0.145.1+26.1", "26.1"),
+        "26.1.2" => ("0.151.0+26.1.2", "26.1.2"),
+        _ => ("0.92.5+1.20.1", "1.20.1"), // fallback
+    };
+
+    let jar_name = format!("fabric-api-{}.jar", api_version);
+    let dest = mods_dir.join(&jar_name);
+    let url = format!(
+        "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/{v}/fabric-api-{v}.jar",
+        v = api_version.replace('+', "%2B")
+    );
+    tracing::info!("Downloading Fabric API {} for MC {}...", api_version, api_mc_ver);
+    herald_mcclient_env::download::download_file(&url, &dest, None).await?;
     tracing::info!("Fabric API ready at {:?}", dest);
     Ok(())
 }

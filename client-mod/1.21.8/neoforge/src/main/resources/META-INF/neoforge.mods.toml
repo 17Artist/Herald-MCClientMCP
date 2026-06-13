@@ -1,0 +1,28 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="MIT"
+issueTrackerURL="https://herald.ai"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="Herald Client"
+displayTest="IGNORE_SERVER_VERSION"
+authors="Herald Team"
+description='''
+Herald automation HTTP bridge (client-side, single-end).
+'''
+
+[[dependencies.${mod_id}]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1,)"
+    ordering="NONE"
+    side="CLIENT"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    type="required"
+    versionRange="[${minecraft_version},1.21.2)"
+    ordering="NONE"
+    side="CLIENT"

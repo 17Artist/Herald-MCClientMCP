@@ -96,25 +96,42 @@ impl LoaderInstaller {
 
     async fn install_fabric(&self, mc_version: &str) -> anyhow::Result<()> {
         info!("Installing Fabric for MC {}...", mc_version);
-        let installer_url = "https://maven.fabricmc.net/net/fabricmc/fabric-installer/1.0.1/fabric-installer-1.0.1.jar";
+
+        // MC 1.x needs older Fabric Loader (0.16.x) and installer that supports it
+        let (installer_url, loader_version) = if mc_version.starts_with("1.") {
+            (
+                "https://maven.fabricmc.net/net/fabricmc/fabric-installer/0.11.2/fabric-installer-0.11.2.jar",
+                Some("0.16.14"),
+            )
+        } else {
+            (
+                "https://maven.fabricmc.net/net/fabricmc/fabric-installer/1.0.1/fabric-installer-1.0.1.jar",
+                None, // uses latest loader (0.18+)
+            )
+        };
+
         let temp_dir = self.game_dir.join("temp");
         tokio::fs::create_dir_all(&temp_dir).await?;
         let installer_path = temp_dir.join("fabric-installer.jar");
 
         crate::download::download_file(installer_url, &installer_path, None).await?;
 
-        // java -jar fabric-installer.jar client -mcversion 1.20.1 -dir <gameDir> -noprofile
-        let output = tokio::process::Command::new(&self.java_path)
-            .arg("-jar")
+        // java -jar fabric-installer.jar client -mcversion <ver> -dir <gameDir> -noprofile [-loader <ver>]
+        let mut cmd = tokio::process::Command::new(&self.java_path);
+        cmd.arg("-jar")
             .arg(&installer_path)
             .arg("client")
             .arg("-mcversion")
             .arg(mc_version)
             .arg("-dir")
             .arg(&self.game_dir)
-            .arg("-noprofile")
-            .output()
-            .await?;
+            .arg("-noprofile");
+
+        if let Some(lv) = loader_version {
+            cmd.arg("-loader").arg(lv);
+        }
+
+        let output = cmd.output().await?;
 
         let _ = tokio::fs::remove_file(&installer_path).await;
 
@@ -212,19 +229,22 @@ impl LoaderInstaller {
 
     /// 获取 MC 版本对应的最新 Forge 版本号。
     async fn get_forge_version(&self, mc_version: &str) -> anyhow::Result<String> {
-        // 对于 1.20.1，最稳定的是 47.3.0
-        // TODO: 从 API 获取最新版本
         match mc_version {
             "1.20.1" => Ok("47.3.0".to_string()),
+            "1.20.4" => Ok("49.0.31".to_string()),
             _ => anyhow::bail!("Unsupported Forge MC version: {}", mc_version),
         }
     }
 
     /// 获取 MC 版本对应的最新 NeoForge 版本号。
     async fn get_neoforge_version(&self, mc_version: &str) -> anyhow::Result<String> {
-        // 对于 1.20.1，NeoForge 从 Forge 分支而来
         match mc_version {
             "1.20.1" => Ok("47.1.106".to_string()),
+            "1.21.1" => Ok("21.1.172".to_string()),
+            "1.21.4" => Ok("21.4.186".to_string()),
+            "1.21.8" => Ok("21.8.52".to_string()),
+            "26.1" => Ok("26.1.0.19-beta".to_string()),
+            "26.1.2" => Ok("26.1.2.76".to_string()),
             _ => anyhow::bail!("Unsupported NeoForge MC version: {}", mc_version),
         }
     }
