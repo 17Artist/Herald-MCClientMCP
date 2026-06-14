@@ -10,10 +10,25 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/rust-1.75+-orange?logo=rust" alt="Rust 1.75+" />
-  <img src="https://img.shields.io/badge/MC-1.20.1-green?logo=minecraft" alt="MC 1.20.1" />
+  <img src="https://img.shields.io/badge/MC-1.20.1--26.1.2-green?logo=minecraft" alt="MC 1.20.1~26.1.2" />
   <img src="https://img.shields.io/badge/MCP-2024--11--05-blue" alt="MCP Protocol" />
   <img src="https://img.shields.io/badge/license-GPL--3.0-purple" alt="License" />
 </p>
+
+---
+
+## 支持版本
+
+| MC 版本 | Fabric | Forge/NeoForge |
+|---------|:------:|:--------------:|
+| 1.20.1  |   ✓    |    ✓ (Forge)   |
+| 1.20.4  |   ✓    |    ✓ (Forge)   |
+| 1.21.1  |   ✓    |    ✓ (NeoForge)|
+| 1.21.4  |   ✓    |    ✓ (NeoForge)|
+| 1.21.8  |   ✓    |    ✓ (NeoForge)|
+| 1.21.11 |   ✓    |    ✓ (NeoForge)|
+| 26.1    |   ✓    |    ✓ (NeoForge)|
+| 26.1.2  |   ✓    |    ✓ (NeoForge)|
 
 ---
 
@@ -59,13 +74,13 @@ mirror = "bmclapi"   # 国内用 bmclapi 加速下载
 | MOD | `mc_mod_status` · `mc_mod_list_actions`                                                                              |
 | 操控  | `mc_action` · `mc_query`                                                                                             |
 
-`mc_action` / `mc_query` 代理了客户端 MOD 注册的 308 个 action（移动、挖矿、GUI 操作、战斗、红石、附魔等）。
+`mc_action` / `mc_query` 代理了客户端 MOD 注册的 311 个 action（移动、挖矿、GUI 操作、战斗、红石、附魔、输入模拟等）。
 
 ---
 
-## 客户端 MOD 能力（308 actions）
+## 客户端 MOD 能力（311 actions）
 
-覆盖移动、方块、物品、战斗、建造、GUI、红石、扫描、断言、调试、事件、网络包等 25 个类别。
+覆盖移动、方块、物品、战斗、建造、GUI、红石、扫描、断言、调试、事件、网络包、输入模拟等 26 个类别。
 
 完整列表见 [docs/ACTIONS.md](docs/ACTIONS.md)，或运行时通过 `mc_mod_list_actions` 动态获取。
 
@@ -87,13 +102,13 @@ mirror = "bmclapi"   # 国内用 bmclapi 加速下载
 
 ```bash
 cd apps/web && npm install && npm run build && cd ../..
-cd client-mod/1.20.1 && ./gradlew :fabric:remapJar && cd ../..
+cd client-mod/1.21.11 && ./gradlew :fabric:build && cd ../..
 cargo build --release -p herald-mcclient
 ```
 
 产物：
 - `target/release/herald-mcclient.exe`（~10 MB，含前端）
-- `client-mod/1.20.1/fabric/build/libs/herald-client-fabric-0.1.0.jar`（MOD，自动注入）
+- `client-mod/<version>/<loader>/build/libs/herald-client-<loader>-0.1.0.jar`（MOD，自动注入）
 
 ---
 

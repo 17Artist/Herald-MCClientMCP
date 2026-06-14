@@ -1,6 +1,16 @@
-# 客户端 MOD Actions 完整列表（308 个）
+# 客户端 MOD Actions 完整列表（311 个）
 
 通过 MCP 工具 `mc_action` / `mc_query` 调用，或运行时使用 `mc_mod_list_actions` 动态获取。
+
+---
+
+## 输入模拟（3）
+
+| Action           | 说明                                    |
+|------------------|---------------------------------------|
+| `mouse_move`     | 模拟鼠标移动（相对移动 dx/dy，控制摄像头旋转）           |
+| `mouse_click`    | 模拟鼠标点击指定屏幕坐标（通过 GLFW 反射）             |
+| `keyboard_input` | 模拟键盘按键（指定按键名或键码，支持 duration_ms 控制按住时间） |
 
 ---
 
@@ -442,7 +452,7 @@
 | `update_jigsaw_block`           | 更新拼图方块        |
 | `lock_difficulty`               | 锁定难度          |
 | `spectator_teleport`            | 旁观者传送         |
-| `connect_to_server`             | 连接服务器         |
+| `connect_to_server`             | 连接到多人服务器（自动断开当前世界） |
 | `create_world`                  | 创建新世界（客户端菜单）  |
 | `join_world`                    | 加入世界          |
 | `leave_world`                   | 离开世界          |
