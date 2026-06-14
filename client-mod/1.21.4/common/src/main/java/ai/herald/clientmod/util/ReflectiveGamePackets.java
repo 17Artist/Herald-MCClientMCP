@@ -159,17 +159,33 @@ public final class ReflectiveGamePackets {
         if (commonPkt == null || clientInfo == null) {
             return null;
         }
-        Constructor<?> infoCtor = clientInfo.getConstructor(
-                String.class,
-                int.class,
-                ChatVisiblity.class,
-                boolean.class,
-                int.class,
-                HumanoidArm.class,
-                boolean.class,
-                boolean.class);
-        Object information = infoCtor.newInstance(
-                locale, viewDistance, vis, chatColors, skinParts, arm, textFiltering, allowServerListings);
+        Object information;
+        // 1.21.4+ adds ParticleStatus as 9th param
+        Class<?> particleStatus = tryLoad("net.minecraft.server.level.ParticleStatus");
+        if (particleStatus != null) {
+            try {
+                Constructor<?> infoCtor = clientInfo.getConstructor(
+                        String.class, int.class, ChatVisiblity.class, boolean.class,
+                        int.class, HumanoidArm.class, boolean.class, boolean.class, particleStatus);
+                // Default to ALL particles
+                Object allParticles = particleStatus.getEnumConstants()[0];
+                information = infoCtor.newInstance(
+                        locale, viewDistance, vis, chatColors, skinParts, arm, textFiltering, allowServerListings, allParticles);
+            } catch (NoSuchMethodException e) {
+                // Fallback to 8-arg constructor
+                Constructor<?> infoCtor = clientInfo.getConstructor(
+                        String.class, int.class, ChatVisiblity.class, boolean.class,
+                        int.class, HumanoidArm.class, boolean.class, boolean.class);
+                information = infoCtor.newInstance(
+                        locale, viewDistance, vis, chatColors, skinParts, arm, textFiltering, allowServerListings);
+            }
+        } else {
+            Constructor<?> infoCtor = clientInfo.getConstructor(
+                    String.class, int.class, ChatVisiblity.class, boolean.class,
+                    int.class, HumanoidArm.class, boolean.class, boolean.class);
+            information = infoCtor.newInstance(
+                    locale, viewDistance, vis, chatColors, skinParts, arm, textFiltering, allowServerListings);
+        }
         Constructor<?> pktCtor = commonPkt.getConstructor(clientInfo);
         return pktCtor.newInstance(information);
     }

@@ -6,7 +6,7 @@ import io.netty.buffer.Unpooled;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.ChatVisiblity;
 
@@ -102,7 +102,7 @@ public final class ReflectiveGamePackets {
         }
     }
 
-    public static ActionResult sendCustomPayload(ClientPacketListener conn, Identifier channel, byte[] data) {
+    public static ActionResult sendCustomPayload(ClientPacketListener conn, ResourceLocation channel, byte[] data) {
         try {
             Object packet = newCustomPayloadPacket(channel, data);
             if (packet == null) {
@@ -159,17 +159,33 @@ public final class ReflectiveGamePackets {
         if (commonPkt == null || clientInfo == null) {
             return null;
         }
-        Constructor<?> infoCtor = clientInfo.getConstructor(
-                String.class,
-                int.class,
-                ChatVisiblity.class,
-                boolean.class,
-                int.class,
-                HumanoidArm.class,
-                boolean.class,
-                boolean.class);
-        Object information = infoCtor.newInstance(
-                locale, viewDistance, vis, chatColors, skinParts, arm, textFiltering, allowServerListings);
+        Object information;
+        // 1.21.4+ adds ParticleStatus as 9th param
+        Class<?> particleStatus = tryLoad("net.minecraft.server.level.ParticleStatus");
+        if (particleStatus != null) {
+            try {
+                Constructor<?> infoCtor = clientInfo.getConstructor(
+                        String.class, int.class, ChatVisiblity.class, boolean.class,
+                        int.class, HumanoidArm.class, boolean.class, boolean.class, particleStatus);
+                // Default to ALL particles
+                Object allParticles = particleStatus.getEnumConstants()[0];
+                information = infoCtor.newInstance(
+                        locale, viewDistance, vis, chatColors, skinParts, arm, textFiltering, allowServerListings, allParticles);
+            } catch (NoSuchMethodException e) {
+                // Fallback to 8-arg constructor
+                Constructor<?> infoCtor = clientInfo.getConstructor(
+                        String.class, int.class, ChatVisiblity.class, boolean.class,
+                        int.class, HumanoidArm.class, boolean.class, boolean.class);
+                information = infoCtor.newInstance(
+                        locale, viewDistance, vis, chatColors, skinParts, arm, textFiltering, allowServerListings);
+            }
+        } else {
+            Constructor<?> infoCtor = clientInfo.getConstructor(
+                    String.class, int.class, ChatVisiblity.class, boolean.class,
+                    int.class, HumanoidArm.class, boolean.class, boolean.class);
+            information = infoCtor.newInstance(
+                    locale, viewDistance, vis, chatColors, skinParts, arm, textFiltering, allowServerListings);
+        }
         Constructor<?> pktCtor = commonPkt.getConstructor(clientInfo);
         return pktCtor.newInstance(information);
     }
@@ -195,12 +211,12 @@ public final class ReflectiveGamePackets {
         return ctor.newInstance(id, action);
     }
 
-    private static Object newCustomPayloadPacket(Identifier channel, byte[] data)
+    private static Object newCustomPayloadPacket(ResourceLocation channel, byte[] data)
             throws ReflectiveOperationException {
         Class<?> gamePkt = tryLoad("net.minecraft.network.protocol.game.ServerboundCustomPayloadPacket");
         if (gamePkt != null) {
             FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.wrappedBuffer(data));
-            Constructor<?> ctor = gamePkt.getConstructor(Identifier.class, FriendlyByteBuf.class);
+            Constructor<?> ctor = gamePkt.getConstructor(ResourceLocation.class, FriendlyByteBuf.class);
             return ctor.newInstance(channel, buf);
         }
         Class<?> commonPkt = tryLoad("net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket");
@@ -235,10 +251,10 @@ public final class ReflectiveGamePackets {
     }
 
     private static final class RawCustomPayloadHandler implements InvocationHandler {
-        private final Identifier id;
+        private final ResourceLocation id;
         private final byte[] data;
 
-        RawCustomPayloadHandler(Identifier id, byte[] data) {
+        RawCustomPayloadHandler(ResourceLocation id, byte[] data) {
             this.id = id;
             this.data = data;
         }
