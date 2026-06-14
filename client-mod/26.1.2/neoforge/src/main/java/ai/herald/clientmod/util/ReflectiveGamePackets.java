@@ -6,7 +6,7 @@ import io.netty.buffer.Unpooled;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
-// ResourceLocation removed in MC 26.x - using reflection
+// Identifier removed in MC 26.x - using reflection
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.ChatVisiblity;
 
