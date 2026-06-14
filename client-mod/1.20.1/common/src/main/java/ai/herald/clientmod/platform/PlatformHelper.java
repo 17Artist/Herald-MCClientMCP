@@ -23,4 +23,10 @@ public final class PlatformHelper {
     public static String getLoaderName() {
         throw new AssertionError("PlatformHelper.getLoaderName not bound by Architectury");
     }
+
+    /** Schedule window hide for headless mode (platform-specific). */
+    @ExpectPlatform
+    public static void scheduleHeadlessHide() {
+        throw new AssertionError("PlatformHelper.scheduleHeadlessHide not bound by Architectury");
+    }
 }
