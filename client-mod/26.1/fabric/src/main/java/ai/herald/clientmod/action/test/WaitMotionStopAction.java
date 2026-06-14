@@ -25,22 +25,26 @@ public final class WaitMotionStopAction implements ActionExecutor {
         if (player == null) return McHelper.notInGame();
 
         Vec3 velocity = player.getDeltaMovement();
-        double magnitude = velocity.length();
+        // Use horizontal magnitude by default (Y is always affected by gravity)
+        double horizontalMag = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
+        double fullMag = velocity.length();
 
         JsonObject data = new JsonObject();
         data.addProperty("vx", velocity.x);
         data.addProperty("vy", velocity.y);
         data.addProperty("vz", velocity.z);
-        data.addProperty("magnitude", magnitude);
+        data.addProperty("horizontalMagnitude", horizontalMag);
+        data.addProperty("fullMagnitude", fullMag);
         data.addProperty("threshold", threshold);
+        data.addProperty("onGround", player.onGround());
 
-        if (magnitude < threshold) {
+        if (horizontalMag < threshold) {
             data.addProperty("stopped", true);
             return ActionResult.ok(data);
         }
 
         return ActionResult.error(ErrorCode.ASSERTION_FAILED,
-                "Player still moving: magnitude=" + String.format("%.4f", magnitude)
+                "Player still moving: horizontal=" + String.format("%.4f", horizontalMag)
                         + " threshold=" + threshold);
     }
 }
