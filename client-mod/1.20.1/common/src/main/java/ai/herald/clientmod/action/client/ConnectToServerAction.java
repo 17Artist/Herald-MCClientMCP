@@ -3,14 +3,42 @@ package ai.herald.clientmod.action.client;
 import ai.herald.clientmod.dispatcher.ActionExecutor;
 import ai.herald.clientmod.dispatcher.ActionResult;
 import ai.herald.clientmod.protocol.ErrorCode;
+import ai.herald.clientmod.util.JsonUtil;
+import ai.herald.clientmod.util.McHelper;
 import com.google.gson.JsonObject;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.client.multiplayer.resolver.ServerAddress;
 
-/** Stub — connecting to servers programmatically is not supported in this build. */
+/**
+ * Connects to a multiplayer server by IP address.
+ * Params:
+ *   ip (required): server address, e.g. "play.example.com" or "192.168.1.1:25565"
+ *   name (optional): display name for the server entry, defaults to the ip
+ */
 public final class ConnectToServerAction implements ActionExecutor {
 
     @Override
     public ActionResult execute(JsonObject params) {
-        return ActionResult.error(ErrorCode.INVALID_PARAMS,
-            "connect_to_server is not supported: programmatic server connection requires async runtime not ported to Herald");
+        String ip = JsonUtil.getStringOrDefault(params, "ip", null);
+        if (ip == null || ip.isEmpty()) {
+            return ActionResult.error(ErrorCode.INVALID_PARAMS, "Missing required param: ip");
+        }
+        String name = JsonUtil.getStringOrDefault(params, "name", ip);
+
+        Minecraft mc = McHelper.mc();
+        ServerAddress address = ServerAddress.parseString(ip);
+
+        mc.execute(() -> {
+            ServerData serverData = new ServerData(name, ip, ServerData.Type.OTHER);
+            net.minecraft.client.gui.screens.ConnectScreen.startConnecting(
+                    mc.screen, mc, address, serverData, false, null);
+        });
+
+        JsonObject data = new JsonObject();
+        data.addProperty("connecting", true);
+        data.addProperty("host", address.getHost());
+        data.addProperty("port", address.getPort());
+        return ActionResult.ok(data);
     }
 }

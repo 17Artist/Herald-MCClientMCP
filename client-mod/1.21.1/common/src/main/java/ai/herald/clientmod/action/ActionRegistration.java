@@ -102,13 +102,18 @@ public final class ActionRegistration {
         r.register("player_abilities",       new PlayerAbilitiesAction());
         r.register("resource_pack_response", new ResourcePackResponseAction());
         r.register("screenshot",             new ScreenshotAction());
-        r.register("connect_to_server",      new ConnectToServerAction());      // stub
+        r.register("connect_to_server",      new ConnectToServerAction());
         r.register("close_screen",           new CloseScreenAction());
         r.register("open_inventory",         new OpenInventoryAction());
         r.register("create_world",           new CreateWorldAction());          // stub
         r.register("join_world",             new JoinWorldAction());            // stub
         r.register("leave_world",            new LeaveWorldAction());
         r.register("shutdown_client",        new ShutdownClientAction());
+
+        // === Input simulation (3) ===
+        r.register("mouse_move",             new ai.herald.clientmod.action.input.MouseMoveAction());
+        r.register("mouse_click",            new ai.herald.clientmod.action.input.MouseClickAction());
+        r.register("keyboard_input",         new ai.herald.clientmod.action.input.KeyboardInputAction());
 
         // === Advanced (17) ===
         r.register("edit_book",              new EditBookAction());
