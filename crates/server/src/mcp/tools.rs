@@ -287,6 +287,21 @@ fn inject_herald_mod(game_dir: &std::path::Path, loader: Option<&str>, version: 
         // Fabric API 的下载已在 client_start 中以 await 方式处理
     }
 
+    // Headless mode: disable pauseOnLostFocus to prevent ESC menu when window is hidden
+    let options_file = game_dir.join("options.txt");
+    if options_file.exists() {
+        if let Ok(content) = std::fs::read_to_string(&options_file) {
+            if content.contains("pauseOnLostFocus:true") {
+                let new_content = content.replace("pauseOnLostFocus:true", "pauseOnLostFocus:false");
+                let _ = std::fs::write(&options_file, new_content);
+                tracing::info!("Set pauseOnLostFocus:false for headless mode");
+            }
+        }
+    } else {
+        // Create options.txt with the required setting
+        let _ = std::fs::write(&options_file, "pauseOnLostFocus:false\n");
+    }
+
     Ok(())
 }
 
