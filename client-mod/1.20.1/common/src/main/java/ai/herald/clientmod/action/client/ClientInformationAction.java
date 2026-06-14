@@ -6,14 +6,14 @@ import ai.herald.clientmod.protocol.ErrorCode;
 import ai.herald.clientmod.util.JsonUtil;
 import ai.herald.clientmod.util.McHelper;
 import com.google.gson.JsonObject;
-import ai.herald.clientmod.util.ReflectiveGamePackets;
 import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.protocol.game.ServerboundClientInformationPacket;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.ChatVisiblity;
 
 /**
- * Port of BlackBoxPro client/ClientInformationAction.kt — 1.20.1 packet takes the
- * eight client-options fields flat (no SyncedClientOptions wrapper, which is 1.20.2+).
+ * Sends client information (locale, view distance, etc.) to the server.
+ * MC 1.20.1 uses ServerboundClientInformationPacket with flat fields.
  */
 public final class ClientInformationAction implements ActionExecutor {
 
@@ -40,7 +40,13 @@ public final class ClientInformationAction implements ActionExecutor {
         ClientPacketListener conn = McHelper.connection();
         if (conn == null) return McHelper.notConnected();
 
-        return ReflectiveGamePackets.sendClientInformation(
-                conn, locale, viewDistance, vis, chatColors, skinParts, arm, textFiltering, allowServerListings);
+        try {
+            conn.send(new ServerboundClientInformationPacket(
+                    locale, viewDistance, vis, chatColors, skinParts, arm, textFiltering, allowServerListings));
+            return ActionResult.ok(new JsonObject());
+        } catch (Exception e) {
+            return ActionResult.error(ErrorCode.MAINTHREAD_FAILURE,
+                    "Failed to send client information: " + e.getMessage());
+        }
     }
 }
