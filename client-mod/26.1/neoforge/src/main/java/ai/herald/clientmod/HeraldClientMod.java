@@ -63,16 +63,9 @@ public final class HeraldClientMod {
             return;
         }
 
-        // Hide window if headless mode requested (works for both Fabric and Forge)
+        // Hide window if headless mode - schedule on first client tick (render thread)
         if ("true".equals(System.getProperty("herald.headless"))) {
-            try {
-                long window = net.minecraft.client.Minecraft.getInstance().getWindow().handle();
-                if (window != 0L) {
-                    org.lwjgl.glfw.GLFW.glfwHideWindow(window);
-                }
-            } catch (Exception e) {
-                LOG.warn("Failed to hide window in headless mode", e);
-            }
+            PlatformHelper.scheduleHeadlessHide();
         }
 
         try {

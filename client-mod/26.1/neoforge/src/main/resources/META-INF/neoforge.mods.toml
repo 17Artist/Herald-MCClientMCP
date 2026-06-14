@@ -26,3 +26,6 @@ Herald automation HTTP bridge (client-side, single-end).
     versionRange="[26.1,27)"
     ordering="NONE"
     side="CLIENT"
+
+[[mixins]]
+config="herald-client.mixins.json"

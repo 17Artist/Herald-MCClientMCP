@@ -5,7 +5,7 @@ import ai.herald.clientmod.platform.neoforge.PlatformHelperImpl;
 import java.nio.file.Path;
 
 /**
- * Platform helper — delegates directly to Fabric implementation.
+ * Platform helper — delegates directly to NeoForge implementation.
  */
 public final class PlatformHelper {
 
@@ -19,5 +19,10 @@ public final class PlatformHelper {
     /** Which mod loader is running this build. */
     public static String getLoaderName() {
         return PlatformHelperImpl.getLoaderName();
+    }
+
+    /** Schedule window hide for headless mode (platform-specific thread safety). */
+    public static void scheduleHeadlessHide() {
+        PlatformHelperImpl.scheduleHeadlessHide();
     }
 }
