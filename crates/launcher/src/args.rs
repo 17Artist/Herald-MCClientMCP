@@ -95,22 +95,66 @@ impl LaunchArgs {
         }
 
         // Filter classpath: remove entries whose artifact is already on module-path (different version)
-        let filtered_cp = if !module_path_artifacts.is_empty() {
-            classpath.split(sep)
-                .filter(|entry| {
-                    if let Some(fname) = Path::new(entry).file_name() {
-                        let fname_str = fname.to_string_lossy();
-                        if let Some(artifact) = extract_artifact_name(&fname_str) {
-                            // If this artifact is on module path, skip it from classpath
-                            return !module_path_artifacts.contains(&artifact);
+        // Also for Fabric: deduplicate ASM jars (keep only the version referenced by the loader profile)
+        let filtered_cp = {
+            let entries: Vec<&str> = classpath.split(sep).collect();
+            let mut result: Vec<&str> = Vec::new();
+            
+            // For Fabric, find the expected ASM version from the loader profile
+            let is_fabric = self.loader.as_deref() == Some("fabric");
+            let fabric_asm_version: Option<String> = if is_fabric {
+                // Find ASM version from Fabric loader profile
+                let fabric_dir = versions_dir.read_dir().ok()
+                    .and_then(|entries| {
+                        entries.filter_map(|e| e.ok())
+                            .find(|e| {
+                                let name = e.file_name().to_string_lossy().to_string();
+                                name.contains("fabric-loader") && name.ends_with(&self.version)
+                            })
+                    });
+                fabric_dir.and_then(|dir| {
+                    let json_name = dir.file_name().to_string_lossy().to_string();
+                    let json_path = dir.path().join(format!("{}.json", json_name));
+                    std::fs::read_to_string(&json_path).ok()
+                }).and_then(|content| {
+                    content.find("org.ow2.asm:asm:").map(|pos| {
+                        let after = &content[pos + 16..];
+                        after.find('"').map(|end| after[..end].to_string())
+                    }).flatten()
+                })
+            } else {
+                None
+            };
+            
+            for entry in &entries {
+                let fname = Path::new(entry).file_name()
+                    .map(|f| f.to_string_lossy().to_string())
+                    .unwrap_or_default();
+                
+                // Module-path conflict filter (for NeoForge/Forge)
+                if !module_path_artifacts.is_empty() {
+                    if let Some(artifact) = extract_artifact_name(&fname) {
+                        if module_path_artifacts.contains(&artifact) {
+                            continue;
                         }
                     }
-                    true
-                })
-                .collect::<Vec<_>>()
-                .join(sep)
-        } else {
-            classpath
+                }
+                
+                // ASM dedup for Fabric: only keep the correct ASM version
+                if is_fabric {
+                    if let Some(ref expected_ver) = fabric_asm_version {
+                        // Check if this is an ASM jar (org/ow2/asm/) with wrong version
+                        if entry.contains("org/ow2/asm/") || entry.contains("org\\ow2\\asm\\") {
+                            if !entry.contains(expected_ver) {
+                                continue;
+                            }
+                        }
+                    }
+                }
+                
+                result.push(entry);
+            }
+            result.join(sep)
         };
 
         // Our JVM args (after version JSON args so they take precedence)
