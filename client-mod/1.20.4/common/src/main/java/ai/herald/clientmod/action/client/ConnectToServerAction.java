@@ -14,9 +14,6 @@ import net.minecraft.client.multiplayer.resolver.ServerAddress;
 /**
  * Connects to a multiplayer server by IP address.
  * If the player is currently in a world, it will disconnect first then connect.
- * Params:
- *   ip (required): server address, e.g. "play.example.com" or "192.168.1.1:25565"
- *   name (optional): display name for the server entry, defaults to the ip
  */
 public final class ConnectToServerAction implements ActionExecutor {
 
@@ -32,25 +29,19 @@ public final class ConnectToServerAction implements ActionExecutor {
         ServerAddress address = ServerAddress.parseString(ip);
         ServerData serverData = new ServerData(name, ip, ServerData.Type.OTHER);
 
-        // If currently in a world, disconnect first then schedule connect on next tick
         if (mc.level != null) {
             mc.execute(() -> {
-                // Disconnect from current world/server
-                if (mc.level != null) {
-                    mc.level.disconnect();
-                }
+                if (mc.level != null) mc.level.disconnect();
                 mc.disconnect(new TitleScreen());
-                // Schedule connect on the NEXT frame after disconnect completes
                 mc.execute(() -> {
                     net.minecraft.client.gui.screens.ConnectScreen.startConnecting(
-                            mc.screen, mc, address, serverData, false, null);
+                            mc.screen, mc, address, serverData, false);
                 });
             });
         } else {
-            // Already at title screen, connect directly
             mc.execute(() -> {
                 net.minecraft.client.gui.screens.ConnectScreen.startConnecting(
-                        mc.screen, mc, address, serverData, false, null);
+                        mc.screen, mc, address, serverData, false);
             });
         }
 
