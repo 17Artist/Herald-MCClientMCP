@@ -227,7 +227,7 @@ async fn client_start(state: &AppState, args: &Value) -> Result<Value, (i32, Str
 }
 
 /// 将 Herald Client MOD jar 注入到 mods/ 目录。
-fn inject_herald_mod(game_dir: &std::path::Path, loader: Option<&str>, version: &str) -> anyhow::Result<()> {
+pub fn inject_herald_mod(game_dir: &std::path::Path, loader: Option<&str>, version: &str) -> anyhow::Result<()> {
     let mods_dir = game_dir.join("mods");
     std::fs::create_dir_all(&mods_dir)?;
 
@@ -329,7 +329,7 @@ fn find_asm_version_for_fabric(versions_dir: &std::path::Path, mc_version: &str)
 }
 
 /// 确保 Fabric API 在 mods/ 中（已存在则跳过，不存在则下载并等待完成）。
-async fn ensure_fabric_api_blocking(mods_dir: &std::path::Path, mc_version: &str) -> anyhow::Result<()> {
+pub async fn ensure_fabric_api_blocking(mods_dir: &std::path::Path, mc_version: &str) -> anyhow::Result<()> {
     // 检查是否已有任何 fabric-api jar
     if let Ok(entries) = std::fs::read_dir(mods_dir) {
         for entry in entries.flatten() {
@@ -352,6 +352,7 @@ async fn ensure_fabric_api_blocking(mods_dir: &std::path::Path, mc_version: &str
         "1.21.1" => ("0.104.0+1.21.1", "1.21.1"),
         "1.21.4" => ("0.112.2+1.21.4", "1.21.4"),
         "1.21.8" => ("0.129.0+1.21.8", "1.21.8"),
+        "1.21.11" => ("0.141.4+1.21.11", "1.21.11"),
         "26.1" => ("0.145.1+26.1", "26.1"),
         "26.1.2" => ("0.151.0+26.1.2", "26.1.2"),
         _ => ("0.92.5+1.20.1", "1.20.1"), // fallback

@@ -98,12 +98,27 @@ impl LoaderInstaller {
     async fn install_fabric(&self, mc_version: &str) -> anyhow::Result<()> {
         info!("Installing Fabric for MC {}...", mc_version);
 
-        // MC 1.x needs older Fabric Loader (0.16.x) and installer that supports it
+        // MC 1.21.9+ needs newer Fabric Loader (0.19+) and installer 1.0.x
+        // MC 1.x (up to 1.21.8) uses older Fabric Loader (0.16.x) with installer 0.11.x
         let (installer_url, loader_version) = if mc_version.starts_with("1.") {
-            (
-                "https://maven.fabricmc.net/net/fabricmc/fabric-installer/0.11.2/fabric-installer-0.11.2.jar",
-                Some("0.16.14"),
-            )
+            // Check if version is >= 1.21.9 (where intermediary was dropped)
+            let needs_new_loader = {
+                let parts: Vec<u32> = mc_version.split('.')
+                    .filter_map(|p| p.parse().ok())
+                    .collect();
+                parts.len() >= 3 && parts[0] == 1 && parts[1] == 21 && parts[2] >= 9
+            };
+            if needs_new_loader {
+                (
+                    "https://maven.fabricmc.net/net/fabricmc/fabric-installer/1.0.1/fabric-installer-1.0.1.jar",
+                    None, // uses latest loader (0.19+)
+                )
+            } else {
+                (
+                    "https://maven.fabricmc.net/net/fabricmc/fabric-installer/0.11.2/fabric-installer-0.11.2.jar",
+                    Some("0.16.14"),
+                )
+            }
         } else {
             (
                 "https://maven.fabricmc.net/net/fabricmc/fabric-installer/1.0.1/fabric-installer-1.0.1.jar",
@@ -245,6 +260,7 @@ impl LoaderInstaller {
             "1.21.1" => Ok("21.1.172".to_string()),
             "1.21.4" => Ok("21.4.157".to_string()),
             "1.21.8" => Ok("21.8.53".to_string()),
+            "1.21.11" => Ok("21.11.42".to_string()),
             "26.1" => Ok("26.1.0.8-beta".to_string()),
             "26.1.2" => Ok("26.1.2.75".to_string()),
             _ => anyhow::bail!("Unsupported NeoForge MC version: {}", mc_version),

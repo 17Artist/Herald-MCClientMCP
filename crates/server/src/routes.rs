@@ -175,14 +175,35 @@ async fn start_client(
     let heap_mb = req.heap_mb.unwrap_or(state.config.mc.heap_mb);
     let username = req.username.unwrap_or_else(|| state.config.mc.offline_username.clone());
 
-    let java = match state.java_manager.find_best_java(17) {
-        Some(j) => j,
-        None => return Json(serde_json::json!({ "ok": false, "error": "No Java 17+ found" })),
+    // Choose Java version based on MC version
+    let min_java: u32 = if version.starts_with("26.") {
+        25
+    } else if version.starts_with("1.21") {
+        21
+    } else {
+        17
     };
+    let java = match state.java_manager.find_best_java(min_java) {
+        Some(j) => j,
+        None => return Json(serde_json::json!({ "ok": false, "error": format!("No Java {}+ found", min_java) })),
+    };
+
+    // Inject Herald MOD jar and set headless options
+    let game_dir = state.config.game_dir();
+    if let Err(e) = crate::mcp::tools::inject_herald_mod(&game_dir, loader.as_deref(), &version) {
+        tracing::warn!("MOD injection failed: {}", e);
+    }
+
+    // Ensure Fabric API is present
+    if loader.as_deref() == Some("fabric") || loader.is_none() {
+        if let Err(e) = crate::mcp::tools::ensure_fabric_api_blocking(&game_dir.join("mods"), &version).await {
+            tracing::warn!("Fabric API download failed: {}", e);
+        }
+    }
 
     let launch_args = herald_mcclient_launcher::args::LaunchArgs {
         java_path: java.path,
-        game_dir: state.config.game_dir(),
+        game_dir,
         version,
         loader,
         heap_mb,

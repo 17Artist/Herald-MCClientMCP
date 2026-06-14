@@ -231,20 +231,37 @@ public final class McVersionCompat {
     @SuppressWarnings("unchecked")
     public static <T> T registryGet(Object registry, Identifier id) {
         if (registry instanceof net.minecraft.core.DefaultedRegistry<?> reg) {
-            return (T) reg.get(id).orElse(null);
+            var opt = reg.get(id);
+            if (opt.isEmpty()) return null;
+            Object val = opt.get();
+            // In 1.21.11+, registry.get() may return Holder<T> instead of T directly
+            if (val instanceof net.minecraft.core.Holder<?> holder) {
+                return (T) holder.value();
+            }
+            return (T) val;
         }
         if (registry instanceof net.minecraft.core.Registry<?> reg) {
-            return (T) reg.get(id).orElse(null);
+            var opt = reg.get(id);
+            if (opt.isEmpty()) return null;
+            Object val = opt.get();
+            if (val instanceof net.minecraft.core.Holder<?> holder) {
+                return (T) holder.value();
+            }
+            return (T) val;
         }
         // Fallback: interpret as string type name
         if (registry instanceof String registryType) {
-            return switch (registryType) {
-                case "block" -> (T) BuiltInRegistries.BLOCK.get(id).orElse(null);
-                case "item" -> (T) BuiltInRegistries.ITEM.get(id).orElse(null);
-                case "entity_type" -> (T) BuiltInRegistries.ENTITY_TYPE.get(id).orElse(null);
-                case "mob_effect" -> (T) BuiltInRegistries.MOB_EFFECT.get(id).orElse(null);
+            Object val = switch (registryType) {
+                case "block" -> BuiltInRegistries.BLOCK.get(id).orElse(null);
+                case "item" -> BuiltInRegistries.ITEM.get(id).orElse(null);
+                case "entity_type" -> BuiltInRegistries.ENTITY_TYPE.get(id).orElse(null);
+                case "mob_effect" -> BuiltInRegistries.MOB_EFFECT.get(id).orElse(null);
                 default -> null;
             };
+            if (val instanceof net.minecraft.core.Holder<?> holder) {
+                return (T) holder.value();
+            }
+            return (T) val;
         }
         return null;
     }

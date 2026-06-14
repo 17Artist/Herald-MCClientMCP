@@ -6,7 +6,7 @@ import io.netty.buffer.Unpooled;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.ChatVisiblity;
 
@@ -102,7 +102,7 @@ public final class ReflectiveGamePackets {
         }
     }
 
-    public static ActionResult sendCustomPayload(ClientPacketListener conn, ResourceLocation channel, byte[] data) {
+    public static ActionResult sendCustomPayload(ClientPacketListener conn, Identifier channel, byte[] data) {
         try {
             Object packet = newCustomPayloadPacket(channel, data);
             if (packet == null) {
@@ -211,12 +211,12 @@ public final class ReflectiveGamePackets {
         return ctor.newInstance(id, action);
     }
 
-    private static Object newCustomPayloadPacket(ResourceLocation channel, byte[] data)
+    private static Object newCustomPayloadPacket(Identifier channel, byte[] data)
             throws ReflectiveOperationException {
         Class<?> gamePkt = tryLoad("net.minecraft.network.protocol.game.ServerboundCustomPayloadPacket");
         if (gamePkt != null) {
             FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.wrappedBuffer(data));
-            Constructor<?> ctor = gamePkt.getConstructor(ResourceLocation.class, FriendlyByteBuf.class);
+            Constructor<?> ctor = gamePkt.getConstructor(Identifier.class, FriendlyByteBuf.class);
             return ctor.newInstance(channel, buf);
         }
         Class<?> commonPkt = tryLoad("net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket");
@@ -251,10 +251,10 @@ public final class ReflectiveGamePackets {
     }
 
     private static final class RawCustomPayloadHandler implements InvocationHandler {
-        private final ResourceLocation id;
+        private final Identifier id;
         private final byte[] data;
 
-        RawCustomPayloadHandler(ResourceLocation id, byte[] data) {
+        RawCustomPayloadHandler(Identifier id, byte[] data) {
             this.id = id;
             this.data = data;
         }
