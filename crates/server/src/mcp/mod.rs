@@ -121,7 +121,11 @@ async fn handle_tools_call(state: &AppState, params: &Value) -> Result<Value, (i
         result_preview: Some(preview),
     });
 
-    result
+    // MCP protocol: tools/call result must be {"content": [...]}
+    match result {
+        Ok(content_array) => Ok(json!({ "content": content_array })),
+        Err(e) => Err(e),
+    }
 }
 
 fn now_ts() -> u64 {
