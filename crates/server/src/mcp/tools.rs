@@ -7,18 +7,18 @@ use crate::state::AppState;
 pub fn tool_definitions() -> Vec<Value> {
     vec![
         // ─── 环境层 ────────────────────────────
-        tool_def("mc_env_probe", "探测主机环境：OS、已安装Java、MC版本缓存", json!({"type": "object"})),
-        tool_def("mc_env_install_java", "下载 Adoptium Temurin JRE", json!({
+        tool_def("mc_env_probe", "探测主机环境：OS/架构、已检测到的Java（path/major/vendor/source）、托管JDK缓存目录、Paper jar缓存、默认MC版本及其所需Java major。AI启动调试链路时**应先调这个**。", json!({"type": "object"})),
+        tool_def("mc_env_install_java", "下载 Adoptium Temurin JRE（major 8/17/21等）并解压到托管JDK缓存。返回task_id；通过mc_env_task_status查进度。已安装时直接done。", json!({
             "type": "object",
-            "properties": { "major": { "type": "integer", "description": "Java major version (17/21)" } },
+            "properties": { "major": { "type": "integer", "description": "Java major（如 21、25）" } },
             "required": ["major"]
         })),
-        tool_def("mc_env_install_minecraft", "下载指定版本MC客户端", json!({
+        tool_def("mc_env_install_minecraft", "下载指定MC版本的客户端。返回task_id。", json!({
             "type": "object",
             "properties": { "version": { "type": "string", "description": "MC version, e.g. 1.20.1" } },
             "required": ["version"]
         })),
-        tool_def("mc_env_install_loader", "安装Fabric/Forge/NeoForge", json!({
+        tool_def("mc_env_install_loader", "安装Fabric/Forge/NeoForge加载器。", json!({
             "type": "object",
             "properties": {
                 "loader": { "type": "string", "enum": ["fabric", "forge", "neoforge"] },
@@ -26,46 +26,46 @@ pub fn tool_definitions() -> Vec<Value> {
             },
             "required": ["loader", "mc_version"]
         })),
-        tool_def("mc_env_task_status", "查询异步下载任务进度", json!({
+        tool_def("mc_env_task_status", "查异步下载任务的进度（status/downloaded/total/error）。任务在完成后1小时被GC。", json!({
             "type": "object",
             "properties": { "task_id": { "type": "string" } },
             "required": ["task_id"]
         })),
 
         // ─── 启动层 ────────────────────────────
-        tool_def("mc_client_status", "客户端当前状态", json!({"type": "object"})),
-        tool_def("mc_client_start", "启动MC客户端", json!({
+        tool_def("mc_client_status", "返回客户端实例当前状态：status (stopped/starting/running/stopping)、pid、mc_version、started_at、work_dir。", json!({"type": "object"})),
+        tool_def("mc_client_start", "启动MC客户端。缺Java/MC/Loader时返回结构化错误（code=env_missing），客户端可据此调mc_env_install_*。Herald MOD会自动注入。等到'Done!'日志后状态切到running再返回。启动后需等待mc_mod_status.online=true才能调mc_action。", json!({
             "type": "object",
             "properties": {
-                "version": { "type": "string", "description": "MC version" },
-                "loader": { "type": "string", "enum": ["fabric", "forge", "neoforge"] },
-                "heap_mb": { "type": "integer" },
-                "username": { "type": "string" }
+                "version": { "type": "string", "description": "MC version, e.g. 1.21.11" },
+                "loader": { "type": "string", "enum": ["fabric", "forge", "neoforge"], "description": "不填用config默认" },
+                "heap_mb": { "type": "integer", "description": "JVM堆内存(MB)，默认4096" },
+                "username": { "type": "string", "description": "离线用户名" }
             }
         })),
-        tool_def("mc_client_stop", "停止MC客户端", json!({"type": "object"})),
-        tool_def("mc_client_logs", "获取MC客户端日志", json!({
+        tool_def("mc_client_stop", "停止MC客户端：先发stop console，15秒超时强制kill。force=true直接kill。", json!({"type": "object"})),
+        tool_def("mc_client_logs", "拉最近N行日志（内存环最多5000行）。每行带ts/stream(stdout|stderr)/text。", json!({
             "type": "object",
-            "properties": { "tail": { "type": "integer", "default": 200 } }
+            "properties": { "tail": { "type": "integer", "default": 200, "description": "行数" } }
         })),
 
         // ─── MOD通信层 ─────────────────────────
-        tool_def("mc_mod_status", "检测Herald Client MOD是否在线", json!({"type": "object"})),
-        tool_def("mc_mod_list_actions", "列出MOD支持的所有action", json!({"type": "object"})),
+        tool_def("mc_mod_status", "检测Herald Client MOD是否在线。online=true时才能调mc_action/mc_query。启动客户端后轮询此接口直到online=true。", json!({"type": "object"})),
+        tool_def("mc_mod_list_actions", "列出MOD支持的所有action ID列表（311个）。", json!({"type": "object"})),
 
         // ─── 客户端操控层 ──────────────────────
-        tool_def("mc_action", "执行单个action", json!({
+        tool_def("mc_action", "执行单个action。前置条件：mc_mod_status.online=true。常用流程：先用gui_click_widget进入世界（点Singleplayer→Create New World→Create New World），然后即可执行游戏内action。311个action覆盖移动/方块/战斗/GUI/扫描/建造/红石/附魔/输入模拟等。", json!({
             "type": "object",
             "properties": {
-                "action": { "type": "string", "description": "Action ID" },
-                "params": { "type": "object", "description": "Action parameters" }
+                "action": { "type": "string", "description": "Action ID，如 query_player_state、mouse_move、chat_command" },
+                "params": { "type": "object", "description": "Action 参数（JSON object）" }
             },
             "required": ["action"]
         })),
-        tool_def("mc_query", "查询客户端状态", json!({
+        tool_def("mc_query", "查询客户端状态（mc_action的快捷方式，自动补query_前缀）。常用：player_state、world_state、nearby_entities、full_inventory。", json!({
             "type": "object",
             "properties": {
-                "query": { "type": "string", "description": "Query type: player_info, inventory, nearby_entities, etc." }
+                "query": { "type": "string", "description": "查询类型：player_state, world_state, nearby_entities, full_inventory, active_effects, block_state, performance 等" }
             },
             "required": ["query"]
         })),

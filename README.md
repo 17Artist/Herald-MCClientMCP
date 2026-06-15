@@ -19,16 +19,16 @@
 
 ## 支持版本
 
-| MC 版本 | Fabric | Forge/NeoForge |
+| MC 版本   | Fabric | Forge/NeoForge |
 |---------|:------:|:--------------:|
-| 1.20.1  |   ✓    |    ✓ (Forge)   |
-| 1.20.4  |   ✓    |    ✓ (Forge)   |
-| 1.21.1  |   ✓    |    ✓ (NeoForge)|
-| 1.21.4  |   ✓    |    ✓ (NeoForge)|
-| 1.21.8  |   ✓    |    ✓ (NeoForge)|
-| 1.21.11 |   ✓    |    ✓ (NeoForge)|
-| 26.1    |   ✓    |    ✓ (NeoForge)|
-| 26.1.2  |   ✓    |    ✓ (NeoForge)|
+| 1.20.1  |   ✓    |   ✓ (Forge)    |
+| 1.20.4  |   ✓    |   ✓ (Forge)    |
+| 1.21.1  |   ✓    |  ✓ (NeoForge)  |
+| 1.21.4  |   ✓    |  ✓ (NeoForge)  |
+| 1.21.8  |   ✓    |  ✓ (NeoForge)  |
+| 1.21.11 |   ✓    |  ✓ (NeoForge)  |
+| 26.1    |   ✓    |  ✓ (NeoForge)  |
+| 26.1.2  |   ✓    |  ✓ (NeoForge)  |
 
 ---
 

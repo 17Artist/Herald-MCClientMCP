@@ -82,7 +82,8 @@ fn handle_initialize() -> Result<Value, (i32, String)> {
         "serverInfo": {
             "name": "herald-mcclient",
             "version": env!("CARGO_PKG_VERSION")
-        }
+        },
+        "instructions": "Herald MCClientMCP - Minecraft客户端AI自动化调试工具。\n\n## 使用流程（必须按顺序）\n\n1. **mc_env_probe** — 先调用，了解环境（已装Java/MC版本）\n2. **mc_client_start** — 启动MC客户端（指定version+loader），缺少依赖时会返回env_missing错误，根据提示调mc_env_install_*安装\n3. **等待MOD上线** — 轮询 mc_mod_status 直到 online=true（通常60秒内）\n4. **进入世界** — 用 mc_action 操作GUI进入游戏世界：\n   - mc_action(action='gui_click_widget', params={text:'Singleplayer'})\n   - mc_action(action='gui_click_widget', params={text:'Create New World'})\n   - mc_action(action='gui_click_widget', params={text:'Create New World'})\n   - 等待15秒世界生成\n5. **执行操作** — 用 mc_action/mc_query 控制游戏（311个action可用）\n\n## 支持版本\nMC 1.20.1, 1.20.4, 1.21.1, 1.21.4, 1.21.8, 1.21.11, 26.1, 26.1.2\n加载器: Fabric / Forge(1.20.x) / NeoForge(1.21.x+)\n\n## 常用action示例\n- 查询玩家: mc_action(action='query_player_state')\n- 设置创造: mc_action(action='chat_command', params={command:'gamemode creative'})\n- 鼠标移动: mc_action(action='mouse_move', params={dx:10, dy:5})\n- 鼠标点击: mc_action(action='mouse_click', params={x:200, y:200, button:0})\n- 键盘输入: mc_action(action='keyboard_input', params={key:'w', duration_ms:100})\n- 连接服务器: mc_action(action='connect_to_server', params={ip:'play.example.com'})"
     }))
 }
 
